@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="row">
+        <div class="col col-md-8 col-md-offset-2 col-xs-8 col-xs-offset-2">
+            <form method="POST" action="{{ url_for('item_delete_confirm', catalog_id=item.catalog_id, item_id=item.id) }}">
+                <h2 class="section-head">Delete {{ item.name }} of catalog {{ item.catalog.name }}</h2>
+                <p>Are you sure you want to delete ?</p>
+                <button class="btn btn-danger" id="item-delete">Delete</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="row">
+        <div class="col col-md-8 col-md-offset-2 col-xs-8 col-md-offset-2">
+            <h2 class="section-head">Edit Item</h2>
+            <form method="post" action="{{ url_for('item_edit_confirm', item_id=item.id) }}">
+                <div class="form-group">
+                    <label for="name">Name :</label>
+                    <input type="text" class="form-control" name="name" value="{{ item.name }}">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description :</label>
+                    <textarea rows="5" class="form-control" name="description">{{ item.description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="catalog_id">Catalog:</label>
+                    <select class="form-control" name="catalog_id">
+                        {% for catalog in catalogs %}
+                            <option value="{{ catalog.id }}" {% if catalog.id == item.catalog.id %}selected{% endif %}>
+                                {{ catalog.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-default">Edit</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

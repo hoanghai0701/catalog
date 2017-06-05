@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block items %}
+    <h2 class="section-head">{{ catalog.name }} Items ({{ items|length }}
+        {% if items|length > 1 %}items{% else %}item{% endif %})
+    </h2>
+    {% if session.has_key('user_id') %}
+        <a class="btn btn-default" href="{{ url_for('item_create', catalog_id=catalog.id) }}">Create an item</a>
+    {% endif %}
+    <ul class="list-group" style="margin-top: 20px;">
+        {% for item in items %}
+            <li class="list-group-item">
+                <a href="/catalogs/{{ catalog.id }}/items/{{ item.id }}">
+                    {{ item.name }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}
