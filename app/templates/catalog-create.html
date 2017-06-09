@@ -7,8 +7,16 @@
                 <label for="name">Catalog name :</label>
                 <input name="name" type="text" class="form-control">
             </div>
+            {% with errors = get_flashed_messages(category_filter=['error']) %}
+            {% if errors %}
+                {% for error in errors %}
+                    <div class="alert alert-danger">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
             <button type="submit" class="btn btn-default">Create</button>
-
         </form>
     </div>
 {% endblock %}

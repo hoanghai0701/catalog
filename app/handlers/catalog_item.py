@@ -1,7 +1,8 @@
 from app import app
-from app.utils.decorators import *
-from . import session
-from flask import render_template, request, redirect, jsonify, url_for, flash, make_response
+from app.utils.decorators import authenticated
+from app.handlers import session
+from flask import render_template, request, redirect, url_for, flash
+from app.models import Catalog, Item
 
 
 @app.route('/catalogs/<int:catalog_id>/items')
@@ -10,7 +11,10 @@ def item_index(catalog_id, *args, **kwargs):
     catalog = session.query(Catalog).filter_by(id=catalog_id).one()
     items = catalog.items
 
-    return render_template('catalog-item-index.html', catalog=catalog, items=items, catalogs=catalogs)
+    return render_template('catalog-item-index.html',
+                           catalog=catalog,
+                           items=items,
+                           catalogs=catalogs)
 
 
 @app.route('/catalogs/<int:catalog_id>/items/<int:item_id>')
@@ -41,8 +45,13 @@ def item_edit_confirm(item_id, **kwargs):
     if item.user_id != user.id:
         return redirect(url_for('item_index', catalog_id=item.catalog_id))
 
-    name = request.form.get('name')
-    description = request.form.get('description')
+    name = request.form.get('name', None)
+    description = request.form.get('description', None)
+
+    if not name or not description:
+        flash('Both item name and description are required', 'error')
+        return redirect(url_for('item_edit', catalog_id=item.catalog_id, item_id=item_id))
+
     catalog_id = request.form.get('catalog_id')
 
     item.name = name
@@ -95,8 +104,12 @@ def item_create_confirm(catalog_id, **kwargs):
     user = kwargs['user']
     catalog = session.query(Catalog).filter_by(id=catalog_id).one()
 
-    name = request.form.get('name')
-    description = request.form.get('description')
+    name = request.form.get('name', None)
+    description = request.form.get('description', None)
+
+    if not name or not description:
+        flash('Both item name and description are required', 'error')
+        return redirect(url_for('item_create', catalog_id=catalog_id))
 
     item = Item(name=name, description=description, catalog_id=catalog.id, user_id=user.id)
     session.add(item)
