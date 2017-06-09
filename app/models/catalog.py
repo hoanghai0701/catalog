@@ -17,5 +17,6 @@ class Catalog(Base):
         return {
             'id': self.id,
             'name': self.name,
-            'items': [item.serialize for item in self.items]
+            'user_id': self.user_id
+            # 'items': [item.serialize for item in self.items]
         }

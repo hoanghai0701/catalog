@@ -1,44 +1,75 @@
 from app import app
 from app.handlers import session
 from app.utils.helpers import json_response
-from app.utils.decorators import authenticated
-from flask import render_template, request, redirect, flash, url_for
-from app.models import Catalog, Item
+from app.utils.decorators import authenticated, catalog_exists, user_owns_catalog
+from flask import request, g
+from app.models import Catalog
 
 
-@app.route('/', methods=['GET'])
-def index():
+@app.route('/catalogs', methods=['GET'])
+def catalog_list():
     catalogs = session.query(Catalog).all()
-    items = session.query(Item).order_by(Item.id.desc()).limit(10).all()
-    return render_template('base.html', catalogs=catalogs, items=items)
+    return json_response(200, 'Get catalogs list successfully', [catalog.serialize for catalog in catalogs])
 
 
-@app.route('/catalogs/create', methods=['GET'])
-@authenticated
-def create(*args, **kwargs):
-    return render_template('catalog-create.html')
+@app.route('/catalogs/<int:catalog_id>', methods=['GET'])
+@catalog_exists
+def catalog_show(catalog_id):
+    catalog = g.catalog
+    return json_response(200, 'Get catalog successfully', catalog.serialize)
 
 
 @app.route('/catalogs', methods=['POST'])
 @authenticated
-def store(*args, **kwargs):
-    name = request.form.get('name', None)
+def catalog_create():
+    name = request.json.get('name', None)
     if not name:
-        flash('Catalog name is required', 'error')
-        return redirect(url_for('create'))
+        return json_response(400, 'Missing arguments', {'name': ['Catalog name is required']})
 
-    user = kwargs['user']
+    user = g.user
     catalog = Catalog(name=name, user_id=user.id)
     session.add(catalog)
     session.commit()
+    session.refresh(catalog)
 
-    return redirect('/')
+    return json_response(200, 'Create catalog successfully', catalog.serialize)
 
 
-@app.route('/catalogs/json', methods=['GET'])
-def json(*args, **kwargs):
-    catalogs = session.query(Catalog).all()
-    json = {'catalogs': [catalog.serialize for catalog in catalogs]}
-    return json_response(json, 200)
+@app.route('/catalogs/<int:catalog_id>', methods=['PUT'])
+@authenticated
+@catalog_exists
+@user_owns_catalog
+def catalog_update(catalog_id):
+    catalog = g.catalog
+
+    name = request.json.get('name', None)
+
+    if not name:
+        return json_response(400, 'Missing arguments', {'name': ['Catalog name is required']})
+
+    catalog.name = name
+    session.commit()
+    session.refresh(catalog)
+
+    return json_response(200, 'Update catalog successfully', catalog.serialize)
+
+
+@app.route('/catalogs/<int:catalog_id>', methods=['DELETE'])
+@authenticated
+@catalog_exists
+@user_owns_catalog
+def catalog_delete(catalog_id):
+    catalog = g.catalog
+
+    session.delete(catalog)
+    session.commit()
+
+    return json_response(200, 'Delete catalog successfully')
+
+
+
+
+
+
 
 
