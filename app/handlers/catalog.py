@@ -1,8 +1,9 @@
 from app import app
-from app.utils.helpers import *
-from app.utils.decorators import *
-from . import session
-from flask import render_template, request, redirect, jsonify, url_for, flash, make_response
+from app.handlers import session
+from app.utils.helpers import json_response
+from app.utils.decorators import authenticated
+from flask import render_template, request, redirect, flash, url_for
+from app.models import Catalog, Item
 
 
 @app.route('/', methods=['GET'])
@@ -21,7 +22,11 @@ def create(*args, **kwargs):
 @app.route('/catalogs', methods=['POST'])
 @authenticated
 def store(*args, **kwargs):
-    name = request.form.get('name')
+    name = request.form.get('name', None)
+    if not name:
+        flash('Catalog name is required', 'error')
+        return redirect(url_for('create'))
+
     user = kwargs['user']
     catalog = Catalog(name=name, user_id=user.id)
     session.add(catalog)
