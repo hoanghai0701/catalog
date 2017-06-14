@@ -10,6 +10,8 @@ import requests
 import json
 import random
 import string
+import datetime
+import jwt
 
 providers = {
     'GOOGLE': 'google',
@@ -124,6 +126,19 @@ def _clear_login_session():
     login_session.pop('provider', None)
 
 
+def _generate_jwt(user):
+    try:
+        exp_duration = app.config.get('JWT_EXP')
+        payload = {
+            'iat': datetime.datetime.utcnow(),
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=exp_duration),
+            'sub': user.id
+        }
+        return jwt.encode(payload, app.secret_key, algorithm='HS256')
+    except Exception as e:
+        raise e
+
+
 @app.route('/logout', methods=['POST'])
 @authenticated
 def logout():
@@ -132,8 +147,6 @@ def logout():
             _revoke_google_token()
         elif login_session['provider'] == providers['FACEBOOK']:
             _revoke_facebook_token()
-
-    _clear_login_session()
 
     return json_response(200, 'Logout successfully')
 
@@ -150,13 +163,6 @@ def gconnect():
     except CustomError, e:
         return json_response(e.code, e.msg)
 
-    _clear_login_session()
-
-    # Store the access token in the session for later use.
-    login_session['provider'] = providers['GOOGLE']
-    login_session['access_token'] = credentials.access_token
-    login_session['gplus_id'] = gplus_id
-
     # Get user info
     data = _get_google_user_info(credentials.access_token)
     user = get_user_by_email(data['email'])
@@ -164,9 +170,12 @@ def gconnect():
     if not user:
         user = _create_user(data['name'], data['email'], data['picture'])
 
-    login_session['user_id'] = user.id
+    try:
+        jwt_token = _generate_jwt(user)
+    except Exception:
+        return json_response(500, 'Cannot create token')
 
-    return json_response(200, 'Login with Google successfully', user.serialize)
+    return json_response(200, 'Login with Google successfully', {'user': user.serialize, 'token': jwt_token})
 
 
 @app.route('/fbconnect', methods=['POST'])
@@ -181,20 +190,17 @@ def fbconnect():
     except Exception, e:
         return json_response(500, 'Cannot get Facebook user info', e.message)
 
-    _clear_login_session()
-
-    login_session['provider'] = providers['FACEBOOK']
-    login_session['facebook_id'] = data["id"]
-    login_session['access_token'] = access_token
-
     user = get_user_by_email(data['email'])
 
     if not user:
         user = _create_user(data['name'], data['email'], data['picture'])
 
-    login_session['user_id'] = user.id
+    try:
+        jwt_token = _generate_jwt(user)
+    except Exception:
+        return json_response(500, 'Cannot create token')
 
-    return json_response(200, 'Login with Facebook successfully', user.serialize)
+    return json_response(200, 'Login with Facebook successfully', {'user': user.serialize, 'token': jwt_token})
 
 
 @app.route('/profile', methods=['GET'])

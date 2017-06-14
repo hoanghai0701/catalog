@@ -9,8 +9,9 @@ from app import app
 CLIENT_ID = json.loads(open('client_secret.json', 'r').read())['web']['client_id']
 APPLICATION_NAME = "Catalog App"
 
-APP_ID = json.loads(open('fb_client_secrets.json', 'r').read())['web']['app_id']
-APP_SECRET = json.loads(open('fb_client_secrets.json', 'r').read())['web']['app_secret']
+fb_client = json.loads(open('fb_client_secrets.json', 'r').read())
+APP_ID = fb_client['web']['app_id']
+APP_SECRET = fb_client['web']['app_secret']
 
 
 def get_session():

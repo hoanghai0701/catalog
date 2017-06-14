@@ -1,23 +1,42 @@
-from flask import session as login_session, redirect, g
+from flask import request, g
 from app.models import User, Catalog, Item
 from app.handlers import session
 from functools import wraps
 from app.utils.helpers import json_response
+import jwt
+import re
+from app import app
 
 
 def authenticated(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if not login_session.has_key('user_id'):
-            return redirect('/login')
-        else:
+        auth = request.headers.get('AUTHORIZATION', None)
+        if not auth:
+            return json_response(403, 'Token not found')
 
-            user = session.query(User).filter_by(id=login_session.get('user_id')).first()
-            if not user:
-                return json_response(404, 'User not found')
+        auth = re.sub("\s+", " ", auth.rstrip().lstrip()).split(' ')
 
-            g.user = user
-            return func(*args, **kwargs)
+        if len(auth) != 2:
+            return json_response(403, 'Invalid header')
+
+        scheme, token = auth
+        if scheme != app.config.get('JWT_SCHEME'):
+            return json_response(403, 'Invalid header')
+
+        try:
+            payload = jwt.decode(token, app.secret_key)
+            user_id = payload['sub']
+        except jwt.ExpiredSignatureError:
+            return json_response(403, 'Expired token')
+        except jwt.InvalidTokenError:
+            return json_response(403, 'Invalid token')
+
+        user = session.query(User).filter_by(id=user_id).first()
+        if not user:
+            return json_response(404, 'User not found')
+        g.user = user
+        return func(*args, **kwargs)
 
     return wrapper
 
@@ -81,5 +100,3 @@ def user_owns_item(func):
         return func(*args, **kwargs)
 
     return wrapper
-
-
